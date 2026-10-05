@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070b12">
+<title>Deriv AI Digit Analyzer</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#070b12;color:#eef3f8;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}
+.app{max-width:1450px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}.title h1{margin:0;font-size:24px}.title p{margin:4px 0 0;color:#8290a4;font-size:12px}
+.pill{padding:8px 11px;border:1px solid #263142;border-radius:99px;color:#91a0b5;font-size:11px;background:#0d131c}.green{color:#28e49c}.red{color:#ff6177}
+.controls,.card{background:#0d131c;border:1px solid #222d3d;border-radius:16px;box-shadow:0 12px 35px #0005}.controls{padding:12px;display:flex;gap:9px;flex-wrap:wrap;margin-bottom:14px}
+select,input,button{background:#090e16;color:#eef3f8;border:1px solid #293548;border-radius:10px;padding:10px 12px;font:inherit}button{font-weight:700;cursor:pointer}.connect{background:#28e49c;color:#06120d;border-color:#28e49c}.disconnect{color:#ff8495}
+.status{display:flex;align-items:center;gap:7px;margin-left:auto;color:#8390a2;font-size:12px}.dot{width:9px;height:9px;border-radius:50%;background:#ff5d73}.dot.on{background:#28e49c;box-shadow:0 0 14px #28e49c}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px}.card{padding:15px}.hero{grid-column:span 8}.dist{grid-column:span 4}.full{grid-column:span 12}.half{grid-column:span 6}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.head h2{font-size:14px;margin:0}.muted{color:#7f8da0;font-size:11px}
+.signal{min-height:245px;display:flex;flex-direction:column;align-items:center;justify-content:center}.ring{width:155px;height:155px;border-radius:50%;border:7px solid #263247;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 9px #090e16;margin-bottom:13px}.ring.entry{border-color:#28e49c;box-shadow:0 0 0 9px #090e16,0 0 48px #28e49c38}.big{font-size:72px;font-weight:900}.signaltext{font-size:16px;font-weight:800}.count{font-size:27px;font-weight:900;margin-top:7px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stat{padding:10px;border:1px solid #222d3d;background:#111824;border-radius:10px}.stat b{display:block;margin-top:3px;font-size:17px}
+.digits{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}.d{background:#090e16;border:1px solid #253144;border-radius:9px;padding:8px;text-align:center}.d b{font-size:16px}.bar{height:4px;background:#263143;border-radius:9px;margin-top:5px}.bar i{display:block;height:100%;background:#4da3ff;border-radius:9px}
+canvas{width:100%;height:190px;background:#080d14;border:1px solid #222d3d;border-radius:10px}.ticks{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;max-height:110px;overflow:auto}.tick{font:12px monospace;background:#090e16;border:1px solid #273346;padding:6px 8px;border-radius:7px}.tick.hot{border-color:#28e49c;color:#28e49c}
+.table{width:100%;border-collapse:collapse;font-size:12px}.table th,.table td{padding:8px;border-bottom:1px solid #202a39;text-align:left}.signalrow{font-weight:700}.note{line-height:1.6;color:#94a0b2;font-size:12px}.log{height:115px;overflow:auto;background:#080c12;border:1px solid #202a39;border-radius:9px;padding:9px;font:11px monospace;color:#aeb8c7}
+footer{text-align:center;color:#5e6a7d;font-size:10px;padding:15px 0}
+@media(max-width:850px){.hero,.dist,.full,.half{grid-column:span 12}.stats{grid-template-columns:repeat(2,1fr)}.status{width:100%;margin-left:0}}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="top"><div class="title"><h1>Deriv AI Digit Analyzer</h1><p>Live Volatility Index analysis • Matches-style signal • Analysis only</p></div><div class="pill">NO AUTO-TRADING</div></div>
+
+<div class="controls">
+<select id="symbol">
+<option value="1HZ10V">Volatility 10 (1s)</option><option value="R_10">Volatility 10</option>
+<option value="1HZ25V" selected>Volatility 25 (1s)</option><option value="R_25">Volatility 25</option>
+<option value="1HZ75V">Volatility 75 (1s)</option><option value="R_75">Volatility 75</option>
+<option value="1HZ100V">Volatility 100 (1s)</option><option value="R_100">Volatility 100</option>
+</select>
+<input id="historyCount" type="number" min="50" max="500" value="100" title="History ticks">
+<button class="connect" id="connect">Connect Live</button><button class="disconnect" id="disconnect">Disconnect</button>
+<div class="status"><span id="dot" class="dot"></span><span id="status">Disconnected</span></div>
+</div>
+
+<div class="grid">
+<section class="card hero">
+<div class="head"><h2 id="market">Volatility 25 (1s)</h2><span class="muted" id="sym">1HZ25V</span></div>
+<div class="signal"><div id="ring" class="ring"><span id="prediction" class="big">—</span></div><div id="signalText" class="signaltext">WAITING FOR DATA</div><div id="count" class="count">20</div><div class="muted">ticks until next analysis cycle</div></div>
+<div class="stats">
+<div class="stat"><span class="muted">Last digit</span><b id="last">—</b></div><div class="stat"><span class="muted">Confidence</span><b id="conf">—</b></div>
+<div class="stat"><span class="muted">Ticks loaded</span><b id="total">0</b></div><div class="stat"><span class="muted">Phase</span><b id="phase">Waiting</b></div>
+</div>
+</section>
+
+<section class="card dist"><div class="head"><h2>Digit Distribution</h2><span class="muted">last 100</span></div><div id="digits" class="digits"></div></section>
+
+<section class="card full"><div class="head"><h2>Live Price Chart</h2><span id="quote" class="muted">Quote: —</span></div><canvas id="chart" width="1200" height="190"></canvas><div id="ticks" class="ticks"></div></section>
+
+<section class="card half"><div class="head"><h2>Pattern Intelligence</h2><span class="muted">local analysis</span></div><div id="analysis" class="note">Load data to calculate hot/cold digits, streaks, repetition and frequency-based confidence.</div></section>
+
+<section class="card half"><div class="head"><h2>Signal History</h2><span class="muted">latest cycles</span></div><table class="table"><thead><tr><th>Time</th><th>Digit</th><th>Confidence</th><th>Reason</th></tr></thead><tbody id="history"></tbody></table></section>
+
+<section class="card full"><div class="head"><h2>System Log</h2><span class="muted">diagnostics</span></div><div id="log" class="log"></div></section>
+</div>
+<footer>Public market-data connection only. No buy, sell, proposal, account, balance, or bulk-trading requests are implemented.</footer>
+</div>
+
+<script>
+const $=x=>document.getElementById(x);
+const names={"1HZ10V":"Volatility 10 (1s)","R_10":"Volatility 10","1HZ25V":"Volatility 25 (1s)","R_25":"Volatility 25","1HZ75V":"Volatility 75 (1s)","R_75":"Volatility 75","1HZ100V":"Volatility 100 (1s)","R_100":"Volatility 100"};
+let ws=null,sub=null,ticks=[],cycle=20,pred=null,signals=[];
+
+function log(x){$("log").innerHTML+=`<div>${new Date().toLocaleTimeString()} — ${x}</div>`;$("log").scrollTop=$("log").scrollHeight}
+function lastDigit(q){let s=String(q);let p=s.indexOf(".");if(p<0)return Number(s.slice(-1));let decimals=s.length-p-1;return Number(Math.round(Number(q)*10**decimals).toString().slice(-1))}
+function analyze(){
+ if(!ticks.length)return;
+ let a=ticks.slice(-100),c=Array(10).fill(0);a.forEach(x=>c[x.d]++);
+ let max=Math.max(...c),p=c.indexOf(max),confidence=Math.round(max/a.length*100);
+ pred=p;$("prediction").textContent=p;$("conf").textContent=confidence+"%";
+ let last=a.at(-1).d,streak=0;for(let i=a.length-1;i>=0&&a[i].d===last;i--)streak++;
+ let runs=0;for(let i=1;i<a.length;i++)if(a[i].d===a[i-1].d)runs++;
+ let parity=a.filter(x=>x.d%2===0).length;
+ let hot=[...c.keys()].sort((x,y)=>c[y]-c[x]).slice(0,3),cold=[...c.keys()].sort((x,y)=>c[x]-c[y]).slice(0,3);
+ $("analysis").innerHTML=`<b>Hot digits:</b> ${hot.join(", ")}<br><b>Cold digits:</b> ${cold.join(", ")}<br><b>Latest streak:</b> ${last} repeated ${streak} time(s)<br><b>Adjacent repeats:</b> ${runs}<br><b>Even digits:</b> ${parity}/${a.length} (${Math.round(parity/a.length*100)}%)<br><br><span class="muted">The prediction is frequency-based. Confidence is not a guaranteed probability of the next tick.</span>`;
+ return {p,confidence,last,streak,hot};
+}
+function renderDist(){
+ let c=Array(10).fill(0);ticks.slice(-100).forEach(x=>c[x.d]++);let m=Math.max(1,...c);
+ $("digits").innerHTML=c.map((n,d)=>`<div class="d"><span class="muted">${d}</span><br><b>${n}</b><div class="bar"><i style="width:${n/m*100}%"></i></div></div>`).join("");
+}
+function renderTicks(){$("ticks").innerHTML=ticks.slice(-45).reverse().map((x,i)=>`<span class="tick ${i===0?"hot":""}">${x.d}</span>`).join("")}
+function renderChart(){
+ let c=$("chart"),x=c.getContext("2d"),a=ticks.slice(-120).map(v=>v.q);x.clearRect(0,0,c.width,c.height);if(a.length<2)return;
+ let mn=Math.min(...a),mx=Math.max(...a),r=mx-mn||1;x.beginPath();a.forEach((v,i)=>{let px=i/(a.length-1)*c.width,py=c.height-12-(v-mn)/r*(c.height-24);i?x.lineTo(px,py):x.moveTo(px,py)});x.strokeStyle="#4da3ff";x.lineWidth=2;x.stroke();
+}
+function addSignal(info){
+ signals.unshift({time:new Date().toLocaleTimeString(),...info});signals=signals.slice(0,8);
+ $("history").innerHTML=signals.map(s=>`<tr><td>${s.time}</td><td>${s.p}</td><td>${s.confidence}%</td><td>Frequency</td></tr>`).join("");
+}
+function onTick(t){
+ let q=Number(t.quote),d=lastDigit(t.quote);ticks.push({q,d});if(ticks.length>500)ticks.shift();
+ $("last").textContent=d;$("quote").textContent="Quote: "+t.quote;$("total").textContent=ticks.length;
+ cycle--;if(cycle<=0){let i=analyze();if(i){addSignal(i);$("ring").classList.add("entry");$("signalText").textContent="ENTRY NOW!";$("phase").textContent="Signal";log("Analysis signal: digit "+i.p+" ("+i.confidence+"%)")}cycle=20}else{$("ring").classList.remove("entry");$("signalText").textContent="ANALYSING";$("phase").textContent="Live"}
+ $("count").textContent=cycle;renderDist();renderTicks();renderChart();if(ticks.length===1)analyze();
+}
+function connect(){
+ disconnect();let sym=$("symbol").value,count=Math.max(50,Math.min(500,Number($("historyCount").value)||100));
+ ws=new WebSocket("wss://ws.binaryws.com/websockets/v3");
+ ws.onopen=()=>{
+   $("dot").classList.add("on");$("status").textContent="Connected";log("Connected to public Deriv market-data WebSocket.");
+   ws.send(JSON.stringify({ticks_history:sym,end:"latest",count,style:"ticks",subscribe:1,req_id:1}));
+   log("Requested "+count+" historical ticks and live updates for "+sym+".");
+ };
+ ws.onmessage=e=>{
+   let m;try{m=JSON.parse(e.data)}catch{return}
+   if(m.error){log("API error: "+m.error.message);return}
+   if(m.msg_type==="history"&&m.history?.prices){
+     ticks=[];m.history.prices.forEach((q,i)=>ticks.push({q:Number(q),d:lastDigit(q)}));cycle=20;analyze();renderDist();renderTicks();renderChart();$("total").textContent=ticks.length;$("last").textContent=ticks.at(-1)?.d??"—";log("Loaded "+ticks.length+" historical ticks.");return;
+   }
+   if(m.msg_type==="tick"){if(m.subscription)sub=m.subscription.id;onTick(m.tick)}
+ };
+ ws.onerror=()=>log("WebSocket connection error.");
+ ws.onclose=()=>{$("dot").classList.remove("on");$("status").textContent="Disconnected";sub=null;log("Disconnected.")}
+}
+function disconnect(){if(ws){try{ws.close()}catch{}ws=null}sub=null}
+$("connect").onclick=connect;$("disconnect").onclick=disconnect;
+$("symbol").onchange=()=>{$("market").textContent=names[$("symbol").value];$("sym").textContent=$("symbol").value};
+renderDist();
+</script>
+</body>
+</html>
